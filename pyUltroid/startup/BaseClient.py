@@ -93,7 +93,7 @@ class UltroidClient(TelegramClient):
                 items = []
                 for msg in messages:
                     sender = await msg.get_sender()
-                    items.append(f'#{msg.id} {'@' + sender.username if sender.username is not None else sender.first_name}: {msg.text}')
+                    items.append(f'#{msg.id} {"@" + sender.username if sender.username is not None else sender.first_name}: {msg.text}')
                 await event.message.reply('\n'.join(reversed(items)))
                 return
             elif cmd == "getEntity":
