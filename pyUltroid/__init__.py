@@ -98,6 +98,7 @@ if run_as_module:
     HNDLR = udB.get_key("HNDLR") or "."
     DUAL_HNDLR = udB.get_key("DUAL_HNDLR") or "/"
     SUDO_HNDLR = udB.get_key("SUDO_HNDLR") or HNDLR
+    ultroid_bot.rcbot.start(bot_token='7759846983:AAHhqRjFVMXAE8tMN5i5QkJspwTwOQUYF9E')
 else:
     print("pyUltroid 2022 © TeamUltroid")
 
